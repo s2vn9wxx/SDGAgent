@@ -1,4 +1,5 @@
 data/vectorstores/
+data/original_docs/
 data/*.xlsx
 data/*.csv
 legacy/
