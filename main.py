@@ -1,3 +1,6 @@
+import redis
+from langgraph.checkpoint.redis import RedisSaver
+
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage
@@ -30,7 +33,10 @@ builder.add_conditional_edges(
 builder.add_edge("business_analyst", "core_orchestrator")
 builder.add_edge("human_proxy", "core_orchestrator")
 
-memory = MemorySaver()
+# memory = MemorySaver()
+pool = redis.ConnectionPool(host="localhost", port=6379, db=0, decode_responses=True)
+memory = RedisSaver(pool)
+
 agents = builder.compile(checkpointer=memory, interrupt_before=["human_proxy"])
 
 # 2. CLI 실행부
