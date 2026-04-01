@@ -1,15 +1,16 @@
-import redis
-from langgraph.checkpoint.redis import RedisSaver
-
+import os
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.redis import RedisSaver
 from langchain_core.messages import HumanMessage
 
 from core.state import State
 from nodes.core_orchestrator import core_orchestrator
 from nodes.business_analyst import business_analyst
 
-# 1. 그래프 구성
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+REDIS_ENDPOINT = os.getenv("REDIS_ENDPOINT")
+
 builder = StateGraph(State)
 
 builder.add_node("core_orchestrator", core_orchestrator)
@@ -33,13 +34,9 @@ builder.add_conditional_edges(
 builder.add_edge("business_analyst", "core_orchestrator")
 builder.add_edge("human_proxy", "core_orchestrator")
 
-# memory = MemorySaver()
-pool = redis.ConnectionPool(host="localhost", port=6379, db=0, decode_responses=True)
-memory = RedisSaver(pool)
+with RedisSaver.from_conn_string("redis://" + REDIS_PASSWORD + "@" + REDIS_ENDPOINT) as checkpointer:
+    agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
 
-agents = builder.compile(checkpointer=memory, interrupt_before=["human_proxy"])
-
-# 2. CLI 실행부
 if __name__ == "__main__":
     thread_config = {"configurable": {"thread_id": "boss_01"}}
     print("\n🚀 에이전트 가동 (종료: q)")
