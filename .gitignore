@@ -1,4 +1,6 @@
-data/
+data/vectorstores/
+data/*.xlsx
+data/*.csv
 legacy/
 .env
 venv
