@@ -23,7 +23,7 @@ embeddings = GoogleGenerativeAIEmbeddings(
 # Loading Data + Pandas Agent
 # =========================
 try:
-    raw_df = pd.read_excel("data/최종_데이터셋_v2.xlsx")
+    raw_df = pd.read_excel("data/full_data.xlsx")
 
     df_store = raw_df[['가맹점구분번호', '가맹점주소', '가맹점명', '브랜드구분코드', '가맹점지역', '업종', '상권', '개설일', '폐업일', '브랜드이름', '별점', '카테고리평가']].drop_duplicates()
 
@@ -43,5 +43,9 @@ try:
     print("✅ 데이터 로드 및 Pandas Agent 초기화 완료!")
 
 except Exception as e:
-    print(f"❌ 데이터 로드 실패 (경로 또는 파일명을 확인하세요): {e}")
+    print(f"⚠️ 데이터 로드 실패 (경로 또는 파일명을 확인하세요): {e}")
+    df_store = pd.DataFrame()
+    df_sales = pd.DataFrame()
+    df_customer = pd.DataFrame()
+    df_market = pd.DataFrame()
     pandas_agent = None
