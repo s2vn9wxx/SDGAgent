@@ -34,13 +34,7 @@ builder.add_conditional_edges(
 builder.add_edge("business_analyst", "core_orchestrator")
 builder.add_edge("human_proxy", "core_orchestrator")
 
-with RedisSaver.from_conn_string("redis://" + REDIS_PASSWORD + "@" + REDIS_ENDPOINT) as checkpointer:
-    agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
-
-if __name__ == "__main__":
-    thread_config = {"configurable": {"thread_id": "boss_01"}}
-    print("\n🚀 에이전트 가동 (종료: q)")
-
+def run_loop(agents, thread_config):
     while True:
         current_state = agents.get_state(thread_config)
 
@@ -65,4 +59,38 @@ if __name__ == "__main__":
             user_input = input("\n[사장님 질문]: ")
             if user_input.lower() in ["q", "exit"]: break
 
+            # 새 질문 시작 전에 이전 대화 회차의 분석 및 제안 상태 초기화
+            agents.update_state(
+                thread_config,
+                {
+                    "analysis_result": "",
+                    "marketing_strategy": "",
+                    "final_answer": "",
+                    "next_step": "",
+                    "next_step_details": ""
+                }
+            )
+
             agents.invoke({"messages": [HumanMessage(content=user_input)]}, config=thread_config)
+
+if __name__ == "__main__":
+    thread_config = {"configurable": {"thread_id": "boss_01"}}
+    print("\n🚀 에이전트 가동 (종료: q)")
+
+    # Redis Saver 환경 변수 검증 및 연결 처리 (실패 시 MemorySaver로 자동 폴백)
+    if REDIS_PASSWORD and REDIS_ENDPOINT:
+        try:
+            connection_string = f"redis://{REDIS_PASSWORD}@{REDIS_ENDPOINT}"
+            with RedisSaver.from_conn_string(connection_string) as checkpointer:
+                agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
+                run_loop(agents, thread_config)
+        except Exception as e:
+            print(f"⚠️ Redis 연결 실패: {e}. MemorySaver로 폴백합니다.")
+            with MemorySaver() as checkpointer:
+                agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
+                run_loop(agents, thread_config)
+    else:
+        print("ℹ️ Redis 환경변수가 설정되지 않았습니다. MemorySaver를 사용합니다.")
+        with MemorySaver() as checkpointer:
+            agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
+            run_loop(agents, thread_config)
