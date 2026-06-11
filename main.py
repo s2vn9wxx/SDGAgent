@@ -87,6 +87,7 @@ if __name__ == "__main__":
                 connection_string = f"redis://{REDIS_ENDPOINT}"
             
             with RedisSaver.from_conn_string(connection_string) as checkpointer:
+                checkpointer.setup() # RediSearch 인덱스 초기화
                 print("✅ RedisSaver 연결 성공! 대화 내역이 레디스에 저장됩니다.")
                 agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
                 run_loop(agents, thread_config)
