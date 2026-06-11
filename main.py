@@ -4,6 +4,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.redis import RedisSaver
 from langchain_core.messages import HumanMessage
 
+
 from core.state import State
 from nodes.core_orchestrator import core_orchestrator
 from nodes.business_analyst import business_analyst
@@ -78,10 +79,15 @@ if __name__ == "__main__":
     print("\n🚀 에이전트 가동 (종료: q)")
 
     # Redis Saver 환경 변수 검증 및 연결 처리 (실패 시 MemorySaver로 자동 폴백)
-    if REDIS_PASSWORD and REDIS_ENDPOINT:
+    if REDIS_ENDPOINT:
         try:
-            connection_string = f"redis://{REDIS_PASSWORD}@{REDIS_ENDPOINT}"
+            if REDIS_PASSWORD:
+                connection_string = f"redis://{REDIS_PASSWORD}@{REDIS_ENDPOINT}"
+            else:
+                connection_string = f"redis://{REDIS_ENDPOINT}"
+            
             with RedisSaver.from_conn_string(connection_string) as checkpointer:
+                print("✅ RedisSaver 연결 성공! 대화 내역이 레디스에 저장됩니다.")
                 agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
                 run_loop(agents, thread_config)
         except Exception as e:
@@ -90,7 +96,7 @@ if __name__ == "__main__":
                 agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
                 run_loop(agents, thread_config)
     else:
-        print("ℹ️ Redis 환경변수가 설정되지 않았습니다. MemorySaver를 사용합니다.")
+        print("ℹ️ Redis 환경변수(REDIS_ENDPOINT)가 설정되지 않았습니다. MemorySaver를 사용합니다.")
         with MemorySaver() as checkpointer:
             agents = builder.compile(checkpointer=checkpointer, interrupt_before=["human_proxy"])
             run_loop(agents, thread_config)

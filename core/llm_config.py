@@ -2,6 +2,7 @@
 import os
 import pandas as pd
 from dotenv import load_dotenv
+# pyrefly: ignore [missing-import]
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 
@@ -14,9 +15,9 @@ API_KEY = os.getenv("API_KEY")
 # =========================
 # LLM / Embeddings
 # =========================
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=API_KEY)
+llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash", google_api_key=API_KEY)
 embeddings = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-2-preview", google_api_key=API_KEY
+    model="models/gemini-embedding-2", google_api_key=API_KEY
 )
 
 # =========================
