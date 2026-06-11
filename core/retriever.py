@@ -7,7 +7,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.docstore.document import Document
 from langchain_core.prompts import ChatPromptTemplate
 
-from core.llm_config import embeddings, llm
+from core.llm_config import embeddings, llm, get_message_content
 
 def initialize_rag(
     embeddings,
@@ -115,5 +115,5 @@ def rag_chain(query: str, analysis_result: str) -> tuple[str, str, str, str]:
         context=context, question=query, analysis_result=analysis_result
     ).to_string()
 
-    strategy = llm.invoke(prompt_text).content
+    strategy = get_message_content(llm.invoke(prompt_text))
     return strategy, rag_debug, rag_query, rag_refs

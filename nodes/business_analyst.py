@@ -4,10 +4,10 @@ import re
 from core.state import State
 # from core.llm_config import pandas_agent
 import pandas as pd
-from core.llm_config import llm, df_store, df_customer, df_market, df_sales
+from core.llm_config import llm, df_store, df_customer, df_market, df_sales, get_message_content
 
 def business_analyst(state: State) -> State:
-    mission = state.get("next_step_details", state["messages"][-1].content)
+    mission = state.get("next_step_details", get_message_content(state["messages"][-1]))
     store_code = state.get("store_code", "")
 
     # 데이터가 로드되지 않았거나 비어 있는 경우 조기 처리
@@ -36,7 +36,7 @@ def business_analyst(state: State) -> State:
 """
 
     try:
-        raw_response = llm.invoke(code_gen_prompt).content
+        raw_response = get_message_content(llm.invoke(code_gen_prompt))
         
         # 정규표현식을 이용해 마크다운 파이썬 코드 블록만 정확하게 추출
         match = re.search(r"```python\s*(.*?)\s*```", raw_response, re.DOTALL)
@@ -69,7 +69,7 @@ def business_analyst(state: State) -> State:
 
 규칙: 마케팅 전략은 제안하지 말고 데이터 기반의 현상 진단만 제공합니다.
 """
-        final_report = llm.invoke(report_prompt).content
+        final_report = get_message_content(llm.invoke(report_prompt))
         state["analysis_result"] = final_report
     except Exception as e:
         state["analysis_result"] = f"데이터 분석 중 오류 발생: {str(e)}"

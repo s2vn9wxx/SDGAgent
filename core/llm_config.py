@@ -20,6 +20,26 @@ embeddings = GoogleGenerativeAIEmbeddings(
     model="models/gemini-embedding-2", google_api_key=API_KEY
 )
 
+def get_message_content(message) -> str:
+    # Safely extract text content from a LangChain message or content field
+    content = getattr(message, "content", message)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict):
+                if "text" in part:
+                    parts.append(part["text"])
+                elif part.get("type") == "text" and "text" in part:
+                    parts.append(part["text"])
+            else:
+                parts.append(str(part))
+        return "".join(parts)
+    return str(content)
+
 # =========================
 # Loading Data + Pandas Agent
 # =========================

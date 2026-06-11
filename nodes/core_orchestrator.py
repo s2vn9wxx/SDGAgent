@@ -3,11 +3,11 @@
 import re
 import json
 from core.state import State
-from core.llm_config import llm
+from core.llm_config import llm, get_message_content
 from core.retriever import rag_chain
 
 def core_orchestrator(state: State) -> State:
-    last_msg = state["messages"][-1].content
+    last_msg = get_message_content(state["messages"][-1])
     analysis = state.get("analysis_result", "")
 
     if not state.get("store_code"):
@@ -30,7 +30,8 @@ def core_orchestrator(state: State) -> State:
 {{"decision": "내용", "message": "지시사항 또는 질문"}}
 """
     res = llm.invoke(prompt)
-    data = json.loads(res.content.replace("```json", "").replace("```", ""))
+    res_text = get_message_content(res)
+    data = json.loads(res_text.replace("```json", "").replace("```", ""))
     
     state["next_step"] = data["decision"]
     state["next_step_details"] = data["message"]
