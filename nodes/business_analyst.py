@@ -32,6 +32,7 @@ def business_analyst(state: State) -> State:
 - 반드시 파이썬 코드만 출력하세요. (마크다운 ```python 코드 블록으로 감싸서 작성)
 - 데이터프레임 조인은 '가맹점구분번호'를 기준으로 합니다.
 - 최종 분석 결과물은 반드시 `analysis_output`이라는 변수에 문자열로 저장하세요.
+- **중요**: pandas(pd), numpy 등은 이미 실행 환경에 전역 변수로 주입되어 있으므로, 코드 시작 부분에 `import` 구문을 절대 작성하지 마세요.
 - 외부 라이브러리(os, sys 등)는 절대 사용하지 마세요.
 """
 
@@ -42,10 +43,21 @@ def business_analyst(state: State) -> State:
         match = re.search(r"```python\s*(.*?)\s*```", raw_response, re.DOTALL)
         code = match.group(1).strip() if match else raw_response.strip()
 
-        # 위협 차단
-        forbidden = ['os.', 'sys.', 'subprocess', 'import ', 'eval(', 'exec(']
-        if any(word in code for word in forbidden):
-            raise PermissionError("보안 위협이 탐지된 코드는 실행할 수 없습니다.")
+        # AST 기반 보안 검증 (금지된 모듈 import 또는 eval/exec/open 함수 사용 방지)
+        import ast
+        try:
+            tree = ast.parse(code)
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    for name in node.names:
+                        module_name = name.name.split('.')[0]
+                        if module_name not in ["pandas", "numpy", "math", "datetime"]:
+                            raise PermissionError(f"허용되지 않은 라이브러리({module_name})가 탐지되었습니다.")
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                    if node.func.id in ["eval", "exec", "open"]:
+                        raise PermissionError(f"금지된 함수({node.func.id}) 호출이 탐지되었습니다.")
+        except SyntaxError as se:
+            raise PermissionError(f"코드 문법 오류가 있습니다: {se}")
         
         # 환경 격리 및 df1~df4 앨리어스 지원
         local_vars = {
@@ -53,7 +65,8 @@ def business_analyst(state: State) -> State:
             "df1": df_store, "df2": df_sales, "df3": df_customer, "df4": df_market,
             "pd": pd
         }
-        exec(code, {"__builtins__": {}}, local_vars)
+        # AST 보안 검사를 완료했으므로, 표준 내장 함수(isinstance 등)를 쓸 수 있도록 globals는 빈 딕셔너리로 전달합니다.
+        exec(code, {}, local_vars)
 
         extracted_data = local_vars.get("analysis_output", "분석 데이터 추출 실패")
         report_prompt = f"""
