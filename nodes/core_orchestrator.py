@@ -14,6 +14,12 @@ def core_orchestrator(state: State) -> State:
         m = re.search(r"\b[A-Z0-9]{10}\b", last_msg.upper())
         state["store_code"] = m.group(0) if m else ""
 
+    # 가맹점 번호가 없으면 즉시 human_proxy로 분기하여 대기 (LLM 호출 방지)
+    if not state.get("store_code"):
+        state["next_step"] = "human_proxy"
+        state["next_step_details"] = "분석을 시작하기 위해 가맹점 번호(10자리 영문/숫자 혼합)를 입력해 주세요."
+        return state
+
     # 데이터가 없으면 분석가에게, 데이터가 있으면 최종 답변 생성 후 종료
     # 추가 정보 필요 시 human_proxy로 보냄
     prompt = f"""
@@ -33,12 +39,8 @@ def core_orchestrator(state: State) -> State:
     res_text = get_message_content(res)
     data = json.loads(res_text.replace("```json", "").replace("```", ""))
     
-    state["next_step"] = data["decision"]
+    # finish 결정 시 marketing_strategist로 라우팅
+    state["next_step"] = "marketing_strategist" if data["decision"] == "finish" else data["decision"]
     state["next_step_details"] = data["message"]
 
-    # RAG 기반 최종 답변 생성
-    if data["decision"] == "finish":
-        strategy, *_ = rag_chain(last_msg, analysis)
-        state["final_answer"] = f"🎯 [진단]\n{analysis}\n\n💡 [전략]\n{strategy}"
-        
     return state
